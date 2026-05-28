@@ -20,6 +20,12 @@ buildscript {
 allprojects { repositories { google(); mavenCentral() } }
 """)
 
+write('gradle.properties', """\
+android.useAndroidX=true
+android.enableJetifier=true
+org.gradle.jvmargs=-Xmx2048m
+""")
+
 write('app/build.gradle', """\
 plugins { id 'com.android.application' }
 android {
