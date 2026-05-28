@@ -1,0 +1,233 @@
+name: Build Signed APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # ── 2. Java ──────────────────────────────────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ── 3. Build Android project from index.html ──────────────────────
+      - name: Generate Android project
+        run: |
+          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/xml
+
+          cp index.html app/src/main/assets/index.html
+
+          # ── settings.gradle ──
+          cat > settings.gradle << 'SETTINGS'
+          rootProject.name = "Clarity"
+          include ':app'
+          SETTINGS
+
+          # ── build.gradle (root) ──
+          cat > build.gradle << 'ROOTGRADLE'
+          buildscript {
+            repositories { google(); mavenCentral() }
+            dependencies { classpath 'com.android.tools.build:gradle:8.2.2' }
+          }
+          allprojects { repositories { google(); mavenCentral() } }
+          ROOTGRADLE
+
+          # ── gradle/wrapper ──
+          mkdir -p gradle/wrapper
+          cat > gradle/wrapper/gradle-wrapper.properties << 'WRAPPER'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          WRAPPER
+
+          curl -fsSL https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar \
+            -o gradle/wrapper/gradle-wrapper.jar || true
+
+          # ── app/build.gradle ──
+          cat > app/build.gradle << 'APPGRADLE'
+          plugins { id 'com.android.application' }
+          android {
+            namespace 'com.clarity.recovery'
+            compileSdk 34
+            defaultConfig {
+              applicationId "com.clarity.recovery"
+              minSdk 24
+              targetSdk 34
+              versionCode 1
+              versionName "1.0"
+            }
+            buildTypes {
+              release {
+                minifyEnabled false
+                signingConfig signingConfigs.release
+              }
+            }
+            signingConfigs {
+              release {
+                storeFile file(System.getenv("KEYSTORE_PATH") ?: "keystore.jks")
+                storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+                keyAlias System.getenv("KEY_ALIAS") ?: ""
+                keyPassword System.getenv("KEY_PASSWORD") ?: ""
+              }
+            }
+          }
+          dependencies { implementation 'androidx.webkit:webkit:1.9.0' }
+          APPGRADLE
+
+          # ── AndroidManifest.xml ──
+          cat > app/src/main/AndroidManifest.xml << 'MANIFEST'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <application
+              android:label="Clarity"
+              android:theme="@style/AppTheme"
+              android:hardwareAccelerated="true">
+              <activity
+                android:name=".MainActivity"
+                android:exported="true"
+                android:screenOrientation="portrait"
+                android:windowSoftInputMode="adjustResize">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          MANIFEST
+
+          # ── strings.xml ──
+          cat > app/src/main/res/values/strings.xml << 'STRINGS'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+            <string name="app_name">Clarity</string>
+          </resources>
+          STRINGS
+
+          # ── styles.xml ──
+          cat > app/src/main/res/values/styles.xml << 'STYLES'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+            <style name="AppTheme" parent="android:Theme.Material.NoTitleBar.Fullscreen">
+              <item name="android:windowBackground">#0f1117</item>
+              <item name="android:statusBarColor">#0f1117</item>
+              <item name="android:navigationBarColor">#0f1117</item>
+            </style>
+          </resources>
+          STYLES
+
+          # ── network_security_config.xml ──
+          cat > app/src/main/res/xml/network_security_config.xml << 'NSC'
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+            <base-config cleartextTrafficPermitted="false"/>
+          </network-security-config>
+          NSC
+
+          # ── MainActivity.java ──
+          mkdir -p app/src/main/java/com/clarity/recovery
+          cat > app/src/main/java/com/clarity/recovery/MainActivity.java << 'MAIN'
+          package com.clarity.recovery;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.view.View;
+          import android.view.WindowManager;
+
+          public class MainActivity extends Activity {
+            private WebView webView;
+
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+
+              // Edge-to-edge + keep screen on
+              getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN
+              );
+
+              webView = new WebView(this);
+              setContentView(webView);
+
+              WebSettings settings = webView.getSettings();
+              settings.setJavaScriptEnabled(true);
+              settings.setDomStorageEnabled(true);
+              settings.setAllowFileAccess(true);
+              settings.setAllowFileAccessFromFileURLs(true);
+              settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+              settings.setTextZoom(100);
+
+              webView.setWebViewClient(new WebViewClient());
+              webView.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+              );
+              webView.loadUrl("file:///android_asset/index.html");
+            }
+
+            @Override
+            public void onBackPressed() {
+              if (webView.canGoBack()) webView.goBack();
+              else super.onBackPressed();
+            }
+          }
+          MAIN
+
+          # ── gradlew ──
+          cat > gradlew << 'GW'
+          #!/bin/sh
+          exec java -jar "$(dirname "$0")/gradle/wrapper/gradle-wrapper.jar" "$@"
+          GW
+          chmod +x gradlew
+
+      # ── 4. Generate keystore ──────────────────────────────────────────
+      - name: Generate signing keystore
+        run: |
+          keytool -genkey -v \
+            -keystore keystore.jks \
+            -alias clarity \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 9125 \
+            -storepass clarity123 \
+            -keypass clarity123 \
+            -dname "CN=Clarity, OU=Dev, O=Recovery, L=Unknown, ST=Unknown, C=US"
+
+      # ── 5. Build ──────────────────────────────────────────────────────
+      - name: Build release APK
+        env:
+          KEYSTORE_PATH: keystore.jks
+          KEYSTORE_PASSWORD: clarity123
+          KEY_ALIAS: clarity
+          KEY_PASSWORD: clarity123
+        run: ./gradlew assembleRelease --no-daemon
+
+      # ── 6. Upload artifact ────────────────────────────────────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: clarity-release
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
