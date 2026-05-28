@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#0f1117"/>
+<title>Clarity — Recovery Companion</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c26;
+    --surface2: #1f2335;
+    --border: rgba(255,255,255,0.07);
+    --accent: #7eb8a4;
+    --accent2: #e8c97a;
+    --accent3: #c47a8a;
+    --text: #e8e6e0;
+    --muted: #7a7d8a;
+    --radius: 16px;
+    --serif: 'DM Serif Display', Georgia, serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    height: 100%;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    overscroll-behavior: none;
+  }
+
+  /* ── LAYOUT ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .header {
+    padding: 18px 20px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .header-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    letter-spacing: 0.3px;
+    color: var(--text);
+  }
+
+  .header-day {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px 12px;
+    flex-shrink: 0;
+  }
+
+  .tab-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 4px;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .tab-btn .icon { font-size: 18px; }
+
+  .tab-btn.active {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── SCROLL AREA ── */
+  .screen {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 80px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .screen.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .card-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* ── STREAK BAR ── */
+  .streak-card {
+    background: linear-gradient(135deg, #162a23 0%, #1a1f2e 100%);
+    border-color: rgba(126,184,164,0.2);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 16px;
+  }
+
+  .streak-number {
+    font-family: var(--serif);
+    font-size: 52px;
+    color: var(--accent);
+    line-height: 1;
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .streak-info { flex: 1; }
+  .streak-label { font-size: 13px; color: var(--muted); }
+  .streak-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .streak-edit-btn {
+    background: rgba(126,184,164,0.12);
+    border: 1px solid rgba(126,184,164,0.25);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: var(--accent);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+
+  /* ── INPUTS ── */
+  input[type=text], input[type=date], input[type=time], textarea, select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 10px 12px;
+    width: 100%;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  textarea { resize: none; line-height: 1.5; }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    margin-top: 12px;
+  }
+  .field-label:first-child { margin-top: 0; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    border: none;
+    border-radius: 10px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 12px 18px;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0f1117;
+    width: 100%;
+    justify-content: center;
+    margin-top: 14px;
+  }
+
+  .btn-primary:active { opacity: 0.8; transform: scale(0.98); }
+
+  .btn-danger {
+    background: rgba(196,122,138,0.15);
+    color: var(--accent3);
+    border: 1px solid rgba(196,122,138,0.25);
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 7px;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  /* ── THOUGHT RECORD ── */
+  .cbt-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .cbt-step-num {
+    background: rgba(126,184,164,0.12);
+    border: 1px solid rgba(126,184,164,0.25);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .cbt-step-body { flex: 1; }
+
+  /* ── EMOTION CHIPS ── */
+  .emotion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+
+  .chip.selected {
+    background: rgba(126,184,164,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── BELIEF SLIDER ── */
+  .belief-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+    border: none;
+    padding: 0;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .belief-val {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* ── ENTRIES LIST ── */
+  .entry-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  .entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+
+  .entry-date {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .entry-title {
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+
+  .entry-preview {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .entry-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 5px;
+    margin-top: 8px;
+  }
+
+  .tag-cbt { background: rgba(126,184,164,0.12); color: var(--accent); }
+  .tag-journal { background: rgba(232,201,122,0.12); color: var(--accent2); }
+  .tag-meeting { background: rgba(196,122,138,0.12); color: var(--accent3); }
+
+  /* ── MEETING LOG ── */
+  .meeting-type-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .meeting-type-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    font-family: var(--sans);
+    transition: all 0.15s;
+  }
+
+  .meeting-type-btn.sel {
+    background: rgba(196,122,138,0.12);
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+
+  /* ── HOME SUMMARY ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .summary-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 12px;
+    text-align: center;
+  }
+
+  .summary-num {
+    font-family: var(--serif);
+    font-size: 30px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .summary-tile-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 5px;
+    font-weight: 500;
+  }
+
+  /* ── MODAL OVERLAY ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 16px 36px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 18px;
+  }
+
+  .modal-title {
+    font-family: var(--serif);
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+
+  /* ── FAB ── */
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 50%;
+    transform: translateX(calc(50% + 170px));
+    width: 52px;
+    height: 52px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none;
+    font-size: 24px;
+    color: #0f1117;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(126,184,164,0.35);
+    z-index: 10;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .fab:active {
+    transform: translateX(calc(50% + 170px)) scale(0.93);
+    box-shadow: 0 2px 10px rgba(126,184,164,0.2);
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .empty-text { font-size: 14px; line-height: 1.5; }
+
+  /* ── SECTION HEADING ── */
+  .section-heading {
+    font-family: var(--serif);
+    font-size: 18px;
+    margin-bottom: 12px;
+    margin-top: 6px;
+    color: var(--text);
+  }
+
+  /* ── DETAIL VIEW ── */
+  .detail-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .detail-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .detail-text { font-size: 14px; line-height: 1.6; }
+
+  .back-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-family: var(--sans);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* mood dot */
+  .mood-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+
+  /* journal mood row */
+  .mood-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .mood-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 4px;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+
+  .mood-btn.sel {
+    background: rgba(232,201,122,0.12);
+    border-color: var(--accent2);
+  }
+
+  /* NA format badges */
+  .format-chip {
+    background: rgba(196,122,138,0.08);
+    border: 1px solid rgba(196,122,138,0.2);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--accent3);
+    display: inline-block;
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
+
+  select option { background: #1f2335; }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+  }
+
+  input[type=checkbox] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+    border-radius: 4px;
+  }
+
+  .checkbox-label { font-size: 14px; }
+
+  .progress-bar-bg {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 6px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div>
+      <div class="header-title">Clarity</div>
+      <div class="header-day" id="headerDate"></div>
+    </div>
+    <div id="sobrietyBadge" style="text-align:right;">
+      <div style="font-size:11px;color:var(--muted);">Clean</div>
+      <div style="font-family:var(--serif);font-size:22px;color:var(--accent);" id="sobrietyDaysHeader">0 days</div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showTab('home')" id="tab-home">
+      <span class="icon">🏠</span>Home
+    </button>
+    <button class="tab-btn" onclick="showTab('cbt')" id="tab-cbt">
+      <span class="icon">🧠</span>CBT
+    </button>
+    <button class="tab-btn" onclick="showTab('journal')" id="tab-journal">
+      <span class="icon">📔</span>Journal
+    </button>
+    <button class="tab-btn" onclick="showTab('meetings')" id="tab-meetings">
+      <span class="icon">🤝</span>Meetings
+    </button>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="card streak-card">
+      <div class="streak-number" id="streakNum">0</div>
+      <div class="streak-info">
+        <div style="font-family:var(--serif);font-size:17px;margin-bottom:3px;">Days clean</div>
+        <div class="streak-label">One day at a time</div>
+        <div class="streak-sub" id="sobrietyStartLabel">Set your clean date</div>
+      </div>
+      <button class="streak-edit-btn" onclick="openStreakModal()">Edit</button>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <div class="section-heading">Recent</div>
+    <div id="recentList"></div>
+  </div>
+
+  <!-- CBT -->
+  <div class="screen" id="screen-cbt">
+    <div id="cbtList"></div>
+  </div>
+
+  <!-- JOURNAL -->
+  <div class="screen" id="screen-journal">
+    <div id="journalList"></div>
+  </div>
+
+  <!-- MEETINGS -->
+  <div class="screen" id="screen-meetings">
+    <div id="meetingList"></div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fabBtn" onclick="openAddModal()">＋</button>
+
+<!-- ADD MODAL -->
+<div class="modal-backdrop" id="addModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="btn btn-secondary" style="flex:1;font-size:13px;" id="addTypeCBT" onclick="setAddType('cbt')">🧠 Thought Record</button>
+      <button class="btn btn-secondary" style="flex:1;font-size:13px;" id="addTypeJournal" onclick="setAddType('journal')">📔 Journal</button>
+      <button class="btn btn-secondary" style="flex:1;font-size:13px;" id="addTypeMeeting" onclick="setAddType('meeting')">🤝 Meeting</button>
+    </div>
+    <div id="addFormContent"></div>
+    <button class="btn btn-primary" onclick="saveEntry()" id="saveBtn">Save</button>
+    <button class="btn" style="width:100%;margin-top:8px;justify-content:center;color:var(--muted);font-size:14px;" onclick="closeModal('addModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- STREAK MODAL -->
+<div class="modal-backdrop" id="streakModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Set Your Clean Date</div>
+    <div class="field-label">Date you got clean</div>
+    <input type="date" id="sobrietyDateInput"/>
+    <button class="btn btn-primary" onclick="saveSobriety()">Save Date</button>
+    <button class="btn" style="width:100%;margin-top:8px;justify-content:center;color:var(--muted);" onclick="closeModal('streakModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal" id="detailModalContent"></div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────
+const STORAGE_KEY = 'clarity_data_v1';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { sobrietyDate: null, entries: [] };
+  } catch(e) { return { sobrietyDate: null, entries: [] }; }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let appData = loadData();
+let currentAddType = 'cbt';
+let currentScreen = 'home';
+
+// ── HELPERS ───────────────────────────────────────
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function daysBetween(d1, d2) {
+  const ms = new Date(d2) - new Date(d1);
+  return Math.max(0, Math.floor(ms / 86400000));
+}
+
+function escapeSQ(s) {
+  return (s || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+// ── SOBRIETY ──────────────────────────────────────
+function getSobrietyDays() {
+  if (!appData.sobrietyDate) return 0;
+  return daysBetween(appData.sobrietyDate, todayISO());
+}
+
+function renderSobriety() {
+  const days = getSobrietyDays();
+  document.getElementById('streakNum').textContent = days;
+  document.getElementById('sobrietyDaysHeader').textContent = days + (days === 1 ? ' day' : ' days');
+  document.getElementById('sobrietyStartLabel').textContent = appData.sobrietyDate
+    ? 'Since ' + formatDate(appData.sobrietyDate)
+    : 'Tap Edit to set your date';
+}
+
+function openStreakModal() {
+  if (appData.sobrietyDate) document.getElementById('sobrietyDateInput').value = appData.sobrietyDate;
+  document.getElementById('streakModal').classList.add('open');
+}
+
+function saveSobriety() {
+  const val = document.getElementById('sobrietyDateInput').value;
+  if (!val) return;
+  appData.sobrietyDate = val;
+  saveData(appData);
+  renderSobriety();
+  closeModal('streakModal');
+}
+
+// ── TABS ──────────────────────────────────────────
+function showTab(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  currentScreen = tab;
+  if (tab === 'home') renderHome();
+  else if (tab === 'cbt') renderCBTList();
+  else if (tab === 'journal') renderJournalList();
+  else if (tab === 'meetings') renderMeetingList();
+}
+
+// ── HEADER DATE ───────────────────────────────────
+function setHeaderDate() {
+  const d = new Date();
+  document.getElementById('headerDate').textContent =
+    d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase();
+}
+
+// ── HOME ──────────────────────────────────────────
+function renderHome() {
+  const entries = appData.entries;
+  const cbtCount = entries.filter(e => e.type === 'cbt').length;
+  const journalCount = entries.filter(e => e.type === 'journal').length;
+  const meetingCount = entries.filter(e => e.type === 'meeting').length;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="summary-tile">
+      <div class="summary-num" style="color:var(--accent)">${cbtCount}</div>
+      <div class="summary-tile-label">Thought Records</div>
+    </div>
+    <div class="summary-tile">
+      <div class="summary-num" style="color:var(--accent2)">${journalCount}</div>
+      <div class="summary-tile-label">Journal Entries</div>
+    </div>
+    <div class="summary-tile" style="grid-column:span 2">
+      <div class="summary-num" style="color:var(--accent3)">${meetingCount}</div>
+      <div class="summary-tile-label">NA Meetings Attended</div>
+    </div>`;
+
+  const recent = [...entries].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,5);
+  if (recent.length === 0) {
+    document.getElementById('recentList').innerHTML = `<div class="empty-state"><div class="empty-icon">🌱</div><div class="empty-text">Your journey starts here.<br>Add your first entry.</div></div>`;
+    return;
+  }
+  document.getElementById('recentList').innerHTML = recent.map(e => entryCard(e)).join('');
+}
+
+// ── ENTRY CARDS ───────────────────────────────────
+function entryCard(e) {
+  const tagMap = { cbt: 'tag-cbt', journal: 'tag-journal', meeting: 'tag-meeting' };
+  const tagLabel = { cbt: 'CBT', journal: 'Journal', meeting: 'NA Meeting' };
+  let title = '', preview = '';
+
+  if (e.type === 'cbt') {
+    title = e.situation ? e.situation.substring(0,60) : 'Thought Record';
+    preview = e.automaticThought ? e.automaticThought.substring(0,80) : '';
+  } else if (e.type === 'journal') {
+    title = e.title || 'Journal Entry';
+    preview = e.body ? e.body.substring(0,80) : '';
+  } else {
+    title = (e.meetingName || 'NA Meeting') + (e.format ? ' · ' + e.format : '');
+    preview = e.reflection ? e.reflection.substring(0,80) : 'No reflection added';
+  }
+
+  return `<div class="entry-item" onclick="openDetail('${escapeSQ(e.id)}')">
+    <div class="entry-header">
+      <div class="entry-date">${formatDate(e.date || e.createdAt.split('T')[0])}</div>
+      <button class="btn btn-danger" onclick="event.stopPropagation();deleteEntry('${escapeSQ(e.id)}')">✕</button>
+    </div>
+    <div class="entry-title">${escapeHTML(title)}</div>
+    <div class="entry-preview">${escapeHTML(preview)}</div>
+    <span class="entry-tag ${tagMap[e.type]}">${tagLabel[e.type]}</span>
+  </div>`;
+}
+
+function escapeHTML(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── CBT LIST ──────────────────────────────────────
+function renderCBTList() {
+  const items = appData.entries.filter(e => e.type === 'cbt').sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  const el = document.getElementById('cbtList');
+  if (items.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🧠</div><div class="empty-text">No thought records yet.<br>Tap + to add one.</div></div>`;
+    return;
+  }
+  el.innerHTML = '<div class="section-heading">Thought Records</div>' + items.map(e => entryCard(e)).join('');
+}
+
+// ── JOURNAL LIST ──────────────────────────────────
+function renderJournalList() {
+  const items = appData.entries.filter(e => e.type === 'journal').sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  const el = document.getElementById('journalList');
+  if (items.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📔</div><div class="empty-text">No journal entries yet.<br>Tap + to write.</div></div>`;
+    return;
+  }
+  el.innerHTML = '<div class="section-heading">Journal</div>' + items.map(e => entryCard(e)).join('');
+}
+
+// ── MEETING LIST ──────────────────────────────────
+function renderMeetingList() {
+  const items = appData.entries.filter(e => e.type === 'meeting').sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  const el = document.getElementById('meetingList');
+
+  const totalMeetings = items.length;
+  const thisMonth = items.filter(e => {
+    const d = new Date(e.createdAt);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  let header = `<div class="card" style="display:flex;gap:20px;align-items:center;">
+    <div style="text-align:center;flex:1;">
+      <div style="font-family:var(--serif);font-size:36px;color:var(--accent3);">${totalMeetings}</div>
+      <div style="font-size:11px;color:var(--muted);">Total meetings</div>
+    </div>
+    <div style="width:1px;height:40px;background:var(--border)"></div>
+    <div style="text-align:center;flex:1;">
+      <div style="font-family:var(--serif);font-size:36px;color:var(--accent3);">${thisMonth}</div>
+      <div style="font-size:11px;color:var(--muted);">This month</div>
+    </div>
+  </div>`;
+
+  if (items.length === 0) {
+    el.innerHTML = header + `<div class="empty-state"><div class="empty-icon">🤝</div><div class="empty-text">No meetings logged yet.<br>Tap + to log one.</div></div>`;
+    return;
+  }
+  el.innerHTML = header + '<div class="section-heading" style="margin-top:8px;">Meeting Log</div>' + items.map(e => entryCard(e)).join('');
+}
+
+// ── ADD MODAL ─────────────────────────────────────
+function openAddModal() {
+  const defaultType = currentScreen === 'journal' ? 'journal'
+    : currentScreen === 'meetings' ? 'meeting'
+    : currentScreen === 'cbt' ? 'cbt'
+    : 'cbt';
+  setAddType(defaultType);
+  document.getElementById('addModal').classList.add('open');
+}
+
+function setAddType(type) {
+  currentAddType = type;
+  ['CBT','Journal','Meeting'].forEach(t => {
+    document.getElementById('addType' + t).style.background = '';
+    document.getElementById('addType' + t).style.borderColor = '';
+    document.getElementById('addType' + t).style.color = '';
+  });
+  const map = { cbt: 'CBT', journal: 'Journal', meeting: 'Meeting' };
+  const btn = document.getElementById('addType' + map[type]);
+  btn.style.background = 'var(--surface2)';
+  btn.style.borderColor = 'var(--accent)';
+  btn.style.color = 'var(--accent)';
+  renderAddForm(type);
+}
+
+const EMOTIONS = ['Anxious','Angry','Sad','Ashamed','Hopeless','Afraid','Guilty','Frustrated','Lonely','Overwhelmed','Hurt','Numb'];
+const MOODS = ['😔','😟','😐','🙂','😊'];
+const FORMATS = ['Open', 'Speaker', 'Step', 'Literature', 'Candlelight', 'Newcomer', 'Online'];
+
+function renderAddForm(type) {
+  const el = document.getElementById('addFormContent');
+  const today = todayISO();
+
+  if (type === 'cbt') {
+    el.innerHTML = `
+      <div class="field-label">Date</div>
+      <input type="date" id="f_date" value="${today}"/>
+
+      <div class="cbt-step">
+        <div class="cbt-step-num">1</div>
+        <div class="cbt-step-body">
+          <div class="field-label">Situation / Trigger</div>
+          <textarea id="f_situation" rows="2" placeholder="What happened? Where, when, with whom?"></textarea>
+        </div>
+      </div>
+
+      <div class="cbt-step">
+        <div class="cbt-step-num">2</div>
+        <div class="cbt-step-body">
+          <div class="field-label">Emotions</div>
+          <div class="emotion-chips" id="emotionChips">
+            ${EMOTIONS.map(e => `<div class="chip" onclick="toggleChip(this)">${e}</div>`).join('')}
+          </div>
+          <div class="field-label" style="margin-top:10px;">Intensity (0-100)</div>
+          <div class="belief-row">
+            <input type="range" id="f_intensity" min="0" max="100" value="50" oninput="document.getElementById('intensityVal').textContent=this.value+'%'"/>
+            <div class="belief-val" id="intensityVal">50%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cbt-step">
+        <div class="cbt-step-num">3</div>
+        <div class="cbt-step-body">
+          <div class="field-label">Automatic Thought</div>
+          <textarea id="f_automaticThought" rows="2" placeholder="What went through your mind?"></textarea>
+          <div class="field-label">Belief in thought (0-100)</div>
+          <div class="belief-row">
+            <input type="range" id="f_beliefBefore" min="0" max="100" value="80" oninput="document.getElementById('beliefBeforeVal').textContent=this.value+'%'"/>
+            <div class="belief-val" id="beliefBeforeVal">80%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cbt-step">
+        <div class="cbt-step-num">4</div>
+        <div class="cbt-step-body">
+          <div class="field-label">Evidence FOR this thought</div>
+          <textarea id="f_evidenceFor" rows="2" placeholder="What supports this thought?"></textarea>
+          <div class="field-label" style="margin-top:10px;">Evidence AGAINST this thought</div>
+          <textarea id="f_evidenceAgainst" rows="2" placeholder="What contradicts it?"></textarea>
+        </div>
+      </div>
+
+      <div class="cbt-step">
+        <div class="cbt-step-num">5</div>
+        <div class="cbt-step-body">
+          <div class="field-label">Balanced / Alternative Thought</div>
+          <textarea id="f_balanced" rows="2" placeholder="A more balanced way to see this situation..."></textarea>
+          <div class="field-label">Belief after reframing (0-100)</div>
+          <div class="belief-row">
+            <input type="range" id="f_beliefAfter" min="0" max="100" value="40" oninput="document.getElementById('beliefAfterVal').textContent=this.value+'%'"/>
+            <div class="belief-val" id="beliefAfterVal">40%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cbt-step">
+        <div class="cbt-step-num">6</div>
+        <div class="cbt-step-body">
+          <div class="field-label">Action / Coping Plan</div>
+          <textarea id="f_action" rows="2" placeholder="What will you do next? How will you cope?"></textarea>
+        </div>
+      </div>`;
+
+  } else if (type === 'journal') {
+    el.innerHTML = `
+      <div class="field-label">Date</div>
+      <input type="date" id="f_date" value="${today}"/>
+      <div class="field-label">Title (optional)</div>
+      <input type="text" id="f_title" placeholder="Give this entry a title..."/>
+      <div class="field-label">Mood</div>
+      <div class="mood-row" id="moodRow">
+        ${MOODS.map((m,i) => `<button class="mood-btn ${i===2?'sel':''}" onclick="selectMood(this,${i})" data-mood="${i}">${m}</button>`).join('')}
+      </div>
+      <div class="field-label">Entry</div>
+      <textarea id="f_body" rows="7" placeholder="How are you feeling today? What's on your mind? Anything you're grateful for?"></textarea>
+      <div class="field-label">Affirmation / Intention</div>
+      <textarea id="f_affirmation" rows="2" placeholder="One thing you're holding onto today..."></textarea>`;
+
+  } else {
+    el.innerHTML = `
+      <div class="field-label">Date</div>
+      <input type="date" id="f_date" value="${today}"/>
+      <div class="field-label">Meeting Name / Location</div>
+      <input type="text" id="f_meetingName" placeholder="e.g. Friday Night Group, Online Step Study"/>
+      <div class="field-label">Format</div>
+      <div class="meeting-type-row" id="formatRow" style="flex-wrap:wrap;gap:6px;">
+        ${FORMATS.map((f,i) => `<button class="meeting-type-btn ${i===0?'sel':''}" onclick="selectFormat(this)" data-format="${f}">${f}</button>`).join('')}
+      </div>
+      <div class="field-label">Time</div>
+      <input type="time" id="f_time"/>
+      <div class="field-label">Reflection / Takeaway</div>
+      <textarea id="f_reflection" rows="3" placeholder="What did you hear? What will you take away?"></textarea>
+      <div class="checkbox-row">
+        <input type="checkbox" id="f_shared"/>
+        <label class="checkbox-label" for="f_shared">I shared at this meeting</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="f_calledSponsor"/>
+        <label class="checkbox-label" for="f_calledSponsor">Called my sponsor today</label>
+      </div>`;
+  }
+}
+
+// ── CHIP / MOOD / FORMAT TOGGLES ──────────────────
+function toggleChip(el) { el.classList.toggle('selected'); }
+
+function selectMood(el, idx) {
+  document.querySelectorAll('#moodRow .mood-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function selectFormat(el) {
+  document.querySelectorAll('#formatRow .meeting-type-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── SAVE ──────────────────────────────────────────
+function saveEntry() {
+  const id = 'e' + Date.now();
+  const now = new Date().toISOString();
+  const date = document.getElementById('f_date')?.value || todayISO();
+  let entry = { id, type: currentAddType, createdAt: now, date };
+
+  if (currentAddType === 'cbt') {
+    const chips = [...document.querySelectorAll('#emotionChips .chip.selected')].map(c => c.textContent);
+    Object.assign(entry, {
+      situation: document.getElementById('f_situation').value,
+      emotions: chips,
+      intensity: document.getElementById('f_intensity').value,
+      automaticThought: document.getElementById('f_automaticThought').value,
+      beliefBefore: document.getElementById('f_beliefBefore').value,
+      evidenceFor: document.getElementById('f_evidenceFor').value,
+      evidenceAgainst: document.getElementById('f_evidenceAgainst').value,
+      balanced: document.getElementById('f_balanced').value,
+      beliefAfter: document.getElementById('f_beliefAfter').value,
+      action: document.getElementById('f_action').value,
+    });
+    if (!entry.situation && !entry.automaticThought) return;
+
+  } else if (currentAddType === 'journal') {
+    const moodBtn = document.querySelector('#moodRow .mood-btn.sel');
+    Object.assign(entry, {
+      title: document.getElementById('f_title').value,
+      mood: moodBtn ? parseInt(moodBtn.dataset.mood) : 2,
+      body: document.getElementById('f_body').value,
+      affirmation: document.getElementById('f_affirmation').value,
+    });
+    if (!entry.body) return;
+
+  } else {
+    const formatBtn = document.querySelector('#formatRow .meeting-type-btn.sel');
+    Object.assign(entry, {
+      meetingName: document.getElementById('f_meetingName').value,
+      format: formatBtn ? formatBtn.dataset.format : 'Open',
+      time: document.getElementById('f_time').value,
+      reflection: document.getElementById('f_reflection').value,
+      shared: document.getElementById('f_shared').checked,
+      calledSponsor: document.getElementById('f_calledSponsor').checked,
+    });
+  }
+
+  appData.entries.push(entry);
+  saveData(appData);
+  closeModal('addModal');
+  if (currentScreen === 'home') renderHome();
+  else if (currentScreen === 'cbt') renderCBTList();
+  else if (currentScreen === 'journal') renderJournalList();
+  else if (currentScreen === 'meetings') renderMeetingList();
+}
+
+// ── DELETE ────────────────────────────────────────
+function deleteEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  appData.entries = appData.entries.filter(e => e.id !== id);
+  saveData(appData);
+  if (currentScreen === 'home') renderHome();
+  else if (currentScreen === 'cbt') renderCBTList();
+  else if (currentScreen === 'journal') renderJournalList();
+  else if (currentScreen === 'meetings') renderMeetingList();
+}
+
+// ── DETAIL ────────────────────────────────────────
+function openDetail(id) {
+  const e = appData.entries.find(x => x.id === id);
+  if (!e) return;
+  let html = `<div class="modal-handle"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">${formatDate(e.date || e.createdAt.split('T')[0])}</div>`;
+
+  if (e.type === 'cbt') {
+    html += `<div class="modal-title">Thought Record</div>`;
+    const rows = [
+      ['Situation', e.situation],
+      ['Emotions', (e.emotions||[]).join(', ') + (e.intensity ? ' · Intensity ' + e.intensity + '%' : '')],
+      ['Automatic Thought', e.automaticThought + (e.beliefBefore ? ' · Belief: ' + e.beliefBefore + '%' : '')],
+      ['Evidence For', e.evidenceFor],
+      ['Evidence Against', e.evidenceAgainst],
+      ['Balanced Thought', e.balanced + (e.beliefAfter ? ' · Belief after: ' + e.beliefAfter + '%' : '')],
+      ['Action / Coping', e.action],
+    ];
+    rows.filter(r => r[1]).forEach(([label, val]) => {
+      html += `<div class="detail-section"><div class="detail-section-title">${label}</div><div class="detail-text">${escapeHTML(val)}</div></div>`;
+    });
+    if (e.beliefBefore && e.beliefAfter) {
+      const before = parseInt(e.beliefBefore), after = parseInt(e.beliefAfter);
+      html += `<div class="detail-section">
+        <div class="detail-section-title">Belief Shift</div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;">
+          <span style="color:var(--accent3)">${before}%</span>
+          <div style="flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
+            <div style="width:${before}%;height:100%;background:var(--accent3);border-radius:2px;"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;margin-top:6px;">
+          <span style="color:var(--accent)">${after}%</span>
+          <div style="flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
+            <div style="width:${after}%;height:100%;background:var(--accent);border-radius:2px;"></div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">Before → After reframe</div>
+      </div>`;
+    }
+
+  } else if (e.type === 'journal') {
+    const moodLabels = ['😔 Low','😟 Struggling','😐 Neutral','🙂 Okay','😊 Good'];
+    html += `<div class="modal-title">${escapeHTML(e.title || 'Journal Entry')}</div>`;
+    html += `<div style="font-size:14px;color:var(--accent2);margin-bottom:14px;">${moodLabels[e.mood] || ''}</div>`;
+    html += `<div class="detail-section"><div class="detail-section-title">Entry</div><div class="detail-text" style="white-space:pre-wrap;">${escapeHTML(e.body)}</div></div>`;
+    if (e.affirmation) html += `<div class="detail-section"><div class="detail-section-title">Affirmation</div><div class="detail-text">${escapeHTML(e.affirmation)}</div></div>`;
+
+  } else {
+    html += `<div class="modal-title">${escapeHTML(e.meetingName || 'NA Meeting')}</div>`;
+    html += `<span class="format-chip">${escapeHTML(e.format||'Open')}</span>`;
+    if (e.time) html += `<span class="format-chip">${escapeHTML(e.time)}</span>`;
+    if (e.shared) html += `<span class="format-chip">Shared ✓</span>`;
+    if (e.calledSponsor) html += `<span class="format-chip">Called Sponsor ✓</span>`;
+    if (e.reflection) html += `<div class="detail-section" style="margin-top:12px;"><div class="detail-section-title">Reflection</div><div class="detail-text" style="white-space:pre-wrap;">${escapeHTML(e.reflection)}</div></div>`;
+  }
+
+  html += `<button class="btn btn-primary" style="margin-top:16px;background:var(--surface2);color:var(--text);border:1px solid var(--border);" onclick="closeModal('detailModal')">Close</button>`;
+
+  document.getElementById('detailModalContent').innerHTML = html;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+// ── MODAL HELPERS ─────────────────────────────────
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close on backdrop tap
+document.querySelectorAll('.modal-backdrop').forEach(el => {
+  el.addEventListener('click', function(ev) {
+    if (ev.target === this) closeModal(this.id);
+  });
+});
+
+// ── INIT ──────────────────────────────────────────
+setHeaderDate();
+renderSobriety();
+renderHome();
+</script>
+</body>
+</html>
