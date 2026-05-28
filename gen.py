@@ -1,17 +1,17 @@
-import os, textwrap
+import os, shutil
 
 def write(path, content):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    d = os.path.dirname(path)
+    if d:
+        os.makedirs(d, exist_ok=True)
     with open(path, 'w') as f:
         f.write(content)
 
-# ── settings.gradle ──────────────────────────────────────────────────────────
 write('settings.gradle', """\
 rootProject.name = "Clarity"
 include ':app'
 """)
 
-# ── build.gradle (root) ───────────────────────────────────────────────────────
 write('build.gradle', """\
 buildscript {
     repositories { google(); mavenCentral() }
@@ -20,7 +20,6 @@ buildscript {
 allprojects { repositories { google(); mavenCentral() } }
 """)
 
-# ── app/build.gradle ──────────────────────────────────────────────────────────
 write('app/build.gradle', """\
 plugins { id 'com.android.application' }
 android {
@@ -53,7 +52,6 @@ dependencies {
 }
 """)
 
-# ── AndroidManifest.xml ───────────────────────────────────────────────────────
 write('app/src/main/AndroidManifest.xml', """\
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -77,7 +75,6 @@ write('app/src/main/AndroidManifest.xml', """\
 </manifest>
 """)
 
-# ── res/values/strings.xml ────────────────────────────────────────────────────
 write('app/src/main/res/values/strings.xml', """\
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
@@ -85,7 +82,6 @@ write('app/src/main/res/values/strings.xml', """\
 </resources>
 """)
 
-# ── res/values/styles.xml ─────────────────────────────────────────────────────
 write('app/src/main/res/values/styles.xml', """\
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
@@ -97,7 +93,6 @@ write('app/src/main/res/values/styles.xml', """\
 </resources>
 """)
 
-# ── res/xml/network_security_config.xml ───────────────────────────────────────
 write('app/src/main/res/xml/network_security_config.xml', """\
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
@@ -105,7 +100,6 @@ write('app/src/main/res/xml/network_security_config.xml', """\
 </network-security-config>
 """)
 
-# ── MainActivity.java ─────────────────────────────────────────────────────────
 write('app/src/main/java/com/clarity/recovery/MainActivity.java', """\
 package com.clarity.recovery;
 
@@ -158,9 +152,7 @@ public class MainActivity extends Activity {
 }
 """)
 
-# ── Copy index.html into assets ───────────────────────────────────────────────
 os.makedirs('app/src/main/assets', exist_ok=True)
-import shutil
 shutil.copy('index.html', 'app/src/main/assets/index.html')
 
 print("Android project generated successfully.")
