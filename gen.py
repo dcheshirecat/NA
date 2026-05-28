@@ -54,6 +54,7 @@ android {
     }
 }
 dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.webkit:webkit:1.9.0'
 }
 """)
@@ -88,13 +89,15 @@ write('app/src/main/res/values/strings.xml', """\
 </resources>
 """)
 
+# Theme.AppCompat.NoActionBar is always available via appcompat dependency
 write('app/src/main/res/values/styles.xml', """\
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="android:Theme.Material.NoTitleBar.Fullscreen">
+    <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">#0f1117</item>
         <item name="android:statusBarColor">#0f1117</item>
         <item name="android:navigationBarColor">#0f1117</item>
+        <item name="android:windowFullscreen">true</item>
     </style>
 </resources>
 """)
@@ -106,18 +109,19 @@ write('app/src/main/res/xml/network_security_config.xml', """\
 </network-security-config>
 """)
 
+# Use AppCompatActivity so the AppCompat theme resolves correctly
 write('app/src/main/java/com/clarity/recovery/MainActivity.java', """\
 package com.clarity.recovery;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.view.View;
 import android.view.WindowManager;
+import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
     private WebView webView;
 
     @Override
